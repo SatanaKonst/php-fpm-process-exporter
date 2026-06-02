@@ -22,11 +22,11 @@ jobs:
           go-version-file: src/go.mod
 
       - name: Build release artifacts
-        run: ./build_release.sh "${GITHUB_REF_NAME}"
+        run: ./build_release.sh "${GITHUB_REF_NAME#v}"
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/${{ github.ref_name }}/*
+            dist/${{ github.ref_name#v }}/*
           generate_release_notes: true

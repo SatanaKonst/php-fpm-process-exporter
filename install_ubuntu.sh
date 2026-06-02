@@ -224,13 +224,18 @@ download_release_binary() {
   fi
 
   version="${tag#v}"
-  asset_name="${BIN_NAME}_${version}_${os}_${arch}"
-  url="https://github.com/${REPO_SLUG}/releases/download/${tag}/${asset_name}"
-  tmpfile="$WORKDIR/$asset_name"
+  for asset_name in "${BIN_NAME}_${version}_${os}_${arch}" "${BIN_NAME}_${tag}_${os}_${arch}"; do
+    url="https://github.com/${REPO_SLUG}/releases/download/${tag}/${asset_name}"
+    tmpfile="$WORKDIR/$asset_name"
 
-  echo "Downloading ${asset_name}"
-  curl -fsSL -o "$tmpfile" "$url"
-  install -m 0755 "$tmpfile" "$WORKDIR/$BIN_NAME"
+    echo "Downloading ${asset_name}"
+    if curl -fsSL -o "$tmpfile" "$url"; then
+      install -m 0755 "$tmpfile" "$WORKDIR/$BIN_NAME"
+      return 0
+    fi
+  done
+
+  return 1
 }
 
 if ! download_release_binary; then
