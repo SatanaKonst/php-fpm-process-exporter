@@ -96,6 +96,7 @@ build_target() {
   )
 
   install -m 0644 "$SRC_DIR/config.example.json" "$stage_dir/config.example.json"
+  install -m 0644 "$ROOT_DIR/grafana-dashboard.json" "$stage_dir/grafana-dashboard.json"
   install -m 0644 "$SRC_DIR/php-fpm-process-exporter.service" "$stage_dir/php-fpm-process-exporter.service"
   install -m 0644 "$ROOT_DIR/install_ubuntu.sh" "$stage_dir/install_ubuntu.sh"
   install -m 0644 "$ROOT_DIR/README.md" "$stage_dir/README.md"
@@ -106,6 +107,7 @@ build_target() {
     tar -czf "$OUT_DIR/$archive_name" \
       php-fpm-process-exporter \
       config.example.json \
+      grafana-dashboard.json \
       php-fpm-process-exporter.service \
       install_ubuntu.sh \
       README.md

@@ -80,6 +80,8 @@ sudo ./install_ubuntu.sh \
 
 Если не передавать `--basic-auth-user` и `--basic-auth-pass`, установщик сам спросит, включать ли basic auth, и при ответе `yes` запросит логин и пароль в интерактивном режиме.
 
+Для Grafana в корне репозитория лежит готовый дашборд: [grafana-dashboard.json](grafana-dashboard.json)
+
 ## Запуск
 
 ```bash
