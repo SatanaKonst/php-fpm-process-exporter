@@ -63,6 +63,12 @@ go build -o ../php-fpm-process-exporter .
 
 Есть готовый скрипт установки: [install_ubuntu.sh](install_ubuntu.sh)
 
+Если не хочешь клонировать репозиторий, можно скачать только установщик и он сам возьмёт готовый бинарник из GitHub Releases:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/SatanaKonst/php-fpm-process-exporter/main/install_ubuntu.sh | sudo bash
+```
+
 Пример запуска:
 
 ```bash
