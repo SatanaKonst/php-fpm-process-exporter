@@ -4,10 +4,9 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStart=/usr/local/bin/php-fpm-process-exporter --listen :9254
+ExecStart=/usr/local/bin/php-fpm-process-exporter --config /etc/php-fpm-process-exporter.json
 Restart=on-failure
 RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
-

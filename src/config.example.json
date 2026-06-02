@@ -1,0 +1,11 @@
+{
+  "listen": ":9254",
+  "proc_root": "/proc",
+  "include_threads": false,
+  "health_path": "/healthz",
+  "metrics_path": "/metrics",
+  "basic_auth": {
+    "username": "metrics",
+    "password": "change-me"
+  }
+}

@@ -3,6 +3,8 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/subtle"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -19,9 +21,10 @@ import (
 )
 
 var (
+	configPath     = flag.String("config", "/etc/php-fpm-process-exporter.json", "path to JSON config file")
 	listenAddr     = flag.String("listen", ":9254", "HTTP listen address")
 	procRoot       = flag.String("proc-root", "/proc", "proc filesystem root")
-	includeThreads  = flag.Bool("include-threads", false, "export per-thread CPU metrics")
+	includeThreads = flag.Bool("include-threads", false, "export per-thread CPU metrics")
 	healthPath     = flag.String("health-path", "/healthz", "health endpoint path")
 	metricsPath    = flag.String("metrics-path", "/metrics", "metrics endpoint path")
 )
@@ -49,22 +52,49 @@ type procInfo struct {
 }
 
 type threadInfo struct {
-	PID    int
-	TID    int
-	Title  string
+	PID        int
+	TID        int
+	Title      string
 	CPUSeconds float64
 }
 
 var userCache sync.Map
+var appConfig = defaultConfig()
+
+type Config struct {
+	Listen         string          `json:"listen"`
+	ProcRoot       string          `json:"proc_root"`
+	IncludeThreads bool            `json:"include_threads"`
+	HealthPath     string          `json:"health_path"`
+	MetricsPath    string          `json:"metrics_path"`
+	BasicAuth      BasicAuthConfig `json:"basic_auth"`
+}
+
+type BasicAuthConfig struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
 
 func main() {
 	flag.Parse()
 
-	http.HandleFunc(*metricsPath, metricsHandler)
-	http.HandleFunc(*healthPath, healthHandler)
+	cfg, err := loadConfig(*configPath)
+	if err != nil {
+		log.Fatalf("load config: %v", err)
+	}
+	applyFlagOverrides(&cfg)
+	if err := validateConfig(cfg); err != nil {
+		log.Fatalf("invalid config: %v", err)
+	}
+	appConfig = cfg
 
-	log.Printf("listening on %s, proc root=%s, includeThreads=%v", *listenAddr, *procRoot, *includeThreads)
-	log.Fatal(http.ListenAndServe(*listenAddr, nil))
+	mux := http.NewServeMux()
+	mux.HandleFunc(appConfig.MetricsPath, metricsHandler)
+	mux.HandleFunc(appConfig.HealthPath, healthHandler)
+
+	srv := &http.Server{Addr: appConfig.Listen, Handler: authMiddleware(mux)}
+	log.Printf("listening on %s, proc root=%s, includeThreads=%v", appConfig.Listen, appConfig.ProcRoot, appConfig.IncludeThreads)
+	log.Fatal(srv.ListenAndServe())
 }
 
 func healthHandler(w http.ResponseWriter, _ *http.Request) {
@@ -73,7 +103,7 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func metricsHandler(w http.ResponseWriter, _ *http.Request) {
-	procs, err := collectPhpFpmProcesses(*procRoot)
+	procs, err := collectPhpFpmProcesses(appConfig.ProcRoot)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -91,9 +121,9 @@ func metricsHandler(w http.ResponseWriter, _ *http.Request) {
 		writeProcessMetrics(bw, p)
 	}
 
-	if *includeThreads {
+	if appConfig.IncludeThreads {
 		writeThreadMetricsHeader(bw)
-		threads, err := collectThreadMetrics(*procRoot, procs)
+		threads, err := collectThreadMetrics(appConfig.ProcRoot, procs)
 		if err != nil {
 			_, _ = fmt.Fprintf(bw, "# exporter error: %v\n", err)
 			return
@@ -108,6 +138,96 @@ func metricsHandler(w http.ResponseWriter, _ *http.Request) {
 			writeThreadMetric(bw, t)
 		}
 	}
+}
+
+func defaultConfig() Config {
+	return Config{
+		Listen:         ":9254",
+		ProcRoot:       "/proc",
+		IncludeThreads: false,
+		HealthPath:     "/healthz",
+		MetricsPath:    "/metrics",
+	}
+}
+
+func loadConfig(path string) (Config, error) {
+	cfg := defaultConfig()
+	if strings.TrimSpace(path) == "" {
+		return cfg, nil
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return cfg, nil
+		}
+		return cfg, err
+	}
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return cfg, nil
+	}
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return cfg, fmt.Errorf("parse config %s: %w", path, err)
+	}
+	return cfg, nil
+}
+
+func applyFlagOverrides(cfg *Config) {
+	flag.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "listen":
+			cfg.Listen = *listenAddr
+		case "proc-root":
+			cfg.ProcRoot = *procRoot
+		case "include-threads":
+			cfg.IncludeThreads = *includeThreads
+		case "health-path":
+			cfg.HealthPath = *healthPath
+		case "metrics-path":
+			cfg.MetricsPath = *metricsPath
+		}
+	})
+}
+
+func validateConfig(cfg Config) error {
+	userSet := strings.TrimSpace(cfg.BasicAuth.Username) != ""
+	passSet := strings.TrimSpace(cfg.BasicAuth.Password) != ""
+	if userSet != passSet {
+		return fmt.Errorf("basic_auth.username and basic_auth.password must be set together")
+	}
+	return nil
+}
+
+func authMiddleware(next http.Handler) http.Handler {
+	if !appConfig.BasicAuth.Enabled() {
+		return next
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		username, password, ok := r.BasicAuth()
+		if !ok || !basicAuthMatches(username, password, appConfig.BasicAuth) {
+			w.Header().Set("WWW-Authenticate", `Basic realm="php-fpm-process-exporter", charset="UTF-8"`)
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func basicAuthMatches(username, password string, cfg BasicAuthConfig) bool {
+	if !cfg.Enabled() {
+		return true
+	}
+	if subtle.ConstantTimeCompare([]byte(username), []byte(cfg.Username)) != 1 {
+		return false
+	}
+	if subtle.ConstantTimeCompare([]byte(password), []byte(cfg.Password)) != 1 {
+		return false
+	}
+	return true
+}
+
+func (c BasicAuthConfig) Enabled() bool {
+	return strings.TrimSpace(c.Username) != "" && strings.TrimSpace(c.Password) != ""
 }
 
 func collectPhpFpmProcesses(root string) ([]procInfo, error) {
@@ -429,4 +549,3 @@ func nonEmpty(v, fallback string) string {
 	}
 	return v
 }
-
