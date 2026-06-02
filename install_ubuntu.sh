@@ -17,7 +17,6 @@ BASIC_AUTH_USER=""
 BASIC_AUTH_PASS=""
 INSTALL_DIR="$BIN_DIR"
 WORKDIR=""
-MODE="binary"
 
 usage() {
   cat <<'EOF'
@@ -33,7 +32,6 @@ Options:
   --basic-auth-pass PASS  Enable basic auth with password
   --install-dir DIR       Binary install directory (default: /usr/local/bin)
   --workdir DIR           Temporary working directory
-  --from-source           Build from source instead of downloading a release binary
   -h, --help              Show help
 
 Example:
@@ -138,10 +136,6 @@ while [[ $# -gt 0 ]]; do
       WORKDIR="${2:?missing value for --workdir}"
       shift 2
       ;;
-    --from-source)
-      MODE="source"
-      shift
-      ;;
     -h|--help)
       usage
       exit 0
@@ -239,26 +233,9 @@ download_release_binary() {
   install -m 0755 "$tmpfile" "$WORKDIR/$BIN_NAME"
 }
 
-build_from_source() {
-  ensure_cmd git git
-  ensure_cmd go golang-go
-
-  local src_dir="$WORKDIR/php-fpm-process-exporter-src"
-  rm -rf "$src_dir"
-  git clone --depth 1 "https://github.com/${REPO_SLUG}.git" "$src_dir"
-  (
-    cd "$src_dir/src"
-    go build -o "$WORKDIR/$BIN_NAME" .
-  )
-}
-
-if [[ "$MODE" == "binary" ]]; then
-  if ! download_release_binary; then
-    echo "Release binary download failed, falling back to source build" >&2
-    build_from_source
-  fi
-else
-  build_from_source
+if ! download_release_binary; then
+  echo "Release binary download failed. Check that the GitHub release exists and contains ${BIN_NAME} for your platform." >&2
+  exit 1
 fi
 
 if [[ -n "${SUDO_USER:-}" && $EUID -eq 0 ]]; then
