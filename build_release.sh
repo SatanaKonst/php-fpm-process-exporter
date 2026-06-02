@@ -60,7 +60,12 @@ done
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_DIR="$ROOT_DIR/src"
-OUT_DIR="$DIST_DIR/$VERSION"
+if [[ "$DIST_DIR" = /* ]]; then
+  DIST_BASE="$DIST_DIR"
+else
+  DIST_BASE="$ROOT_DIR/$DIST_DIR"
+fi
+OUT_DIR="$DIST_BASE/$VERSION"
 
 if [[ ! -f "$SRC_DIR/go.mod" ]]; then
   echo "go.mod not found in $SRC_DIR" >&2
