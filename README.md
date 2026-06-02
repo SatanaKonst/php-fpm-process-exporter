@@ -37,6 +37,28 @@ cd src
 go build -o ../php-fpm-process-exporter .
 ```
 
+## Сборка релиза
+
+Для release-артефактов есть скрипт [build_release.sh](build_release.sh).
+Для GitHub Releases добавлен workflow в [.github/workflows/release.yml](.github/workflows/release.yml), он запускается на тегах `v*`.
+
+Пример:
+
+```bash
+./build_release.sh v1.0.0
+```
+
+Скрипт соберёт:
+- бинарники под `linux/amd64` и `linux/arm64`
+- архивы `tar.gz` с бинарником, примером конфига, unit-файлом, установщиком и README
+- `checksums.txt`
+
+Если нужен только один таргет:
+
+```bash
+./build_release.sh v1.0.0 --targets linux/amd64
+```
+
 ## Установка на Ubuntu
 
 Есть готовый скрипт установки: [install_ubuntu.sh](install_ubuntu.sh)
