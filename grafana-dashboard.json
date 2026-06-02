@@ -90,9 +90,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "count by (master_config, role) (php_fpm_process_info{master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"})",
+              "expr": "count by (job, master_config, role) (php_fpm_process_info{job=~\"$job\", master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"})",
               "intervalFactor": 2,
-              "legendFormat": "{{master_config}} / {{role}}",
+              "legendFormat": "{{job}} / {{master_config}} / {{role}}",
               "metric": "php_fpm_process_info",
               "refId": "A",
               "step": 10
@@ -168,9 +168,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(php_fpm_process_cpu_seconds_total{master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}[$interval])",
+              "expr": "rate(php_fpm_process_cpu_seconds_total{job=~\"$job\", master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}[$interval])",
               "intervalFactor": 2,
-              "legendFormat": "{{master_config}} / {{role}}",
+              "legendFormat": "{{job}} / {{master_config}} / {{role}}",
               "metric": "php_fpm_process_cpu_seconds_total",
               "refId": "A",
               "step": 10
@@ -246,9 +246,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "php_fpm_process_resident_memory_bytes{master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}",
+              "expr": "php_fpm_process_resident_memory_bytes{job=~\"$job\", master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}",
               "intervalFactor": 2,
-              "legendFormat": "{{master_config}} / {{role}}",
+              "legendFormat": "{{job}} / {{master_config}} / {{role}}",
               "metric": "php_fpm_process_resident_memory_bytes",
               "refId": "A",
               "step": 10
@@ -324,9 +324,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "php_fpm_process_virtual_memory_bytes{master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}",
+              "expr": "php_fpm_process_virtual_memory_bytes{job=~\"$job\", master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}",
               "intervalFactor": 2,
-              "legendFormat": "{{master_config}} / {{role}}",
+              "legendFormat": "{{job}} / {{master_config}} / {{role}}",
               "metric": "php_fpm_process_virtual_memory_bytes",
               "refId": "A",
               "step": 10
@@ -373,7 +373,7 @@
       "height": "140px",
       "panels": [
         {
-          "content": "### Как читать дашборд\n\n- `master_config` - путь к конфигу пула php-fpm, это главный разрез по инстансам.\n- `user` - владелец процесса, обычно это аккаунт сайта.\n- `role` - `master`, `worker` или `php-fpm`.\n- Верхний ряд показывает текущие процессы и потребление по выбранным фильтрам.\n- Нижние панели показывают топы по CPU и памяти, чтобы быстро найти горячий пул или аккаунт.\n\nЕсли выбираешь несколько `master_config` или `user`, графики суммируются по выбранным значениям.",
+          "content": "### Как читать дашборд\n\n- `job` - это scrape job из Prometheus, например `BquadroHosting-php-fpm`.\n- `master_config` - путь к конфигу пула php-fpm, это главный разрез по инстансам.\n- `user` - владелец процесса, обычно это аккаунт сайта.\n- `role` - `master`, `worker` или `php-fpm`.\n- Верхний ряд показывает текущие процессы и потребление по выбранным фильтрам.\n- Нижние панели показывают топы по CPU и памяти, чтобы быстро найти горячий пул или аккаунт.\n\nЕсли выбираешь несколько `job`, `master_config` или `user`, графики суммируются по выбранным значениям.",
           "mode": "markdown",
           "span": 12,
           "title": "Пояснение к графикам",
@@ -425,9 +425,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "topk(10, sum by (master_config) (rate(php_fpm_process_cpu_seconds_total{master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}[$interval])))",
+              "expr": "topk(10, sum by (job, master_config) (rate(php_fpm_process_cpu_seconds_total{job=~\"$job\", master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}[$interval])))",
               "intervalFactor": 2,
-              "legendFormat": "{{master_config}}",
+              "legendFormat": "{{job}} / {{master_config}}",
               "metric": "php_fpm_process_cpu_seconds_total",
               "refId": "A",
               "step": 10
@@ -503,9 +503,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "topk(10, sum by (master_config) (php_fpm_process_resident_memory_bytes{master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}))",
+              "expr": "topk(10, sum by (job, master_config) (php_fpm_process_resident_memory_bytes{job=~\"$job\", master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}))",
               "intervalFactor": 2,
-              "legendFormat": "{{master_config}}",
+              "legendFormat": "{{job}} / {{master_config}}",
               "metric": "php_fpm_process_resident_memory_bytes",
               "refId": "A",
               "step": 10
@@ -581,9 +581,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "topk(10, sum by (user) (rate(php_fpm_process_cpu_seconds_total{master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}[$interval])))",
+              "expr": "topk(10, sum by (job, user) (rate(php_fpm_process_cpu_seconds_total{job=~\"$job\", master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}[$interval])))",
               "intervalFactor": 2,
-              "legendFormat": "{{user}}",
+              "legendFormat": "{{job}} / {{user}}",
               "metric": "php_fpm_process_cpu_seconds_total",
               "refId": "A",
               "step": 10
@@ -659,9 +659,9 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "topk(10, sum by (user) (php_fpm_process_resident_memory_bytes{master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}))",
+              "expr": "topk(10, sum by (job, user) (php_fpm_process_resident_memory_bytes{job=~\"$job\", master_config=~\"$master_config\", user=~\"$user\", role=~\"$role\"}))",
               "intervalFactor": 2,
-              "legendFormat": "{{user}}",
+              "legendFormat": "{{job}} / {{user}}",
               "metric": "php_fpm_process_resident_memory_bytes",
               "refId": "A",
               "step": 10
@@ -813,9 +813,22 @@
         "hide": 0,
         "includeAll": true,
         "multi": true,
+        "name": "job",
+        "options": [],
+        "query": "label_values(php_fpm_process_info,job)",
+        "refresh": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".+",
+        "current": {},
+        "datasource": "${DS_PROMETHEUS}",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
         "name": "master_config",
         "options": [],
-        "query": "label_values(php_fpm_process_info,master_config)",
+        "query": "label_values(php_fpm_process_info{job=~\"$job\"},master_config)",
         "refresh": 1,
         "type": "query"
       },
@@ -828,7 +841,7 @@
         "multi": true,
         "name": "user",
         "options": [],
-        "query": "label_values(php_fpm_process_info{master_config=~\"$master_config\"},user)",
+        "query": "label_values(php_fpm_process_info{job=~\"$job\", master_config=~\"$master_config\"},user)",
         "refresh": 1,
         "type": "query"
       },
@@ -841,7 +854,7 @@
         "multi": true,
         "name": "role",
         "options": [],
-        "query": "label_values(php_fpm_process_info,role)",
+        "query": "label_values(php_fpm_process_info{job=~\"$job\"},role)",
         "refresh": 1,
         "type": "query"
       }
